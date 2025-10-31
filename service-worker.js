@@ -1,6 +1,8 @@
 const CACHE_NAME = 'tsu-asset-tracker-v1';
 const urlsToCache = [
-  '/asset-inventory.html',
+  './',
+  './index.html',
+  './manifest.json',
   'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
   'https://upload.wikimedia.org/wikipedia/commons/7/7e/Texas_Southern_University_wordmark.svg'
 ];

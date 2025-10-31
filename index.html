@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSU Asset Inventory Tracker</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Asset inventory tracking system for Texas Southern University">
+    <meta name="theme-color" content="#800020">
+    <link rel="manifest" href="manifest.json">
+
+    <!-- iOS Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TSU Assets">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="icon-192.png">
+
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #e0e0e0;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        input, select, textarea {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+            background: #f9fff9;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+        }
+
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #0b7dda;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+
+        .btn-danger:hover {
+            background: #da190b;
+        }
+
+        .btn-edit {
+            background: #FF9800;
+            color: white;
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+
+        .btn-edit:hover {
+            background: #e68900;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: #f0f0f0;
+            padding: 15px 20px;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 5px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f8f8f8;
+            font-weight: 600;
+            color: #555;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .scanner-hint {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #856404;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .header-logo {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-logo img {
+            max-width: 400px;
+            width: 100%;
+            height: auto;
+        }
+
+        .camera-btn {
+            background: #9C27B0;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 8px;
+        }
+
+        .camera-btn:hover {
+            background: #7B1FA2;
+        }
+
+        .input-with-camera {
+            display: flex;
+            align-items: center;
+        }
+
+        .input-with-camera input {
+            flex: 1;
+        }
+
+        .scanner-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .scanner-modal.active {
+            display: flex;
+        }
+
+        .scanner-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .scanner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .scanner-header h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .close-scanner {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        #reader {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .scanner-hint-text {
+            margin-top: 15px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .camera-btn {
+                padding: 10px 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-logo">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/7/7e/Texas_Southern_University_wordmark.svg" alt="Texas Southern University">
+    </div>
+
+    <div class="container">
+        <h1>📦 Asset Inventory Tracker</h1>
+        <p class="subtitle">Scan or enter asset information below</p>
+
+        <div class="scanner-hint">
+            💡 <strong>Tip:</strong> Your barcode scanner will automatically input data into the focused field. Press Tab or Enter to move to the next field.
+        </div>
+
+        <form id="assetForm">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="assetTag">Asset Tag *</label>
+                    <div class="input-with-camera">
+                        <input type="text" id="assetTag" required autofocus>
+                        <button type="button" class="camera-btn" onclick="openScanner('assetTag')" title="Scan with camera">📷</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="serialNumber">Serial Number *</label>
+                    <div class="input-with-camera">
+                        <input type="text" id="serialNumber" required>
+                        <button type="button" class="camera-btn" onclick="openScanner('serialNumber')" title="Scan with camera">📷</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="make">Make *</label>
+                    <select id="make" required onchange="handleMakeChange()">
+                        <option value="">Select Make...</option>
+                        <option value="Apple">Apple</option>
+                        <option value="HP">HP</option>
+                        <option value="Dell">Dell</option>
+                        <option value="Microsoft">Microsoft</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <input type="text" id="makeOther" placeholder="Enter make..." style="display: none; margin-top: 8px;">
+                </div>
+                <div class="form-group">
+                    <label for="model">Model *</label>
+                    <input type="text" id="model" required>
+                </div>
+                <div class="form-group">
+                    <label for="building">Building *</label>
+                    <select id="building" required>
+                        <option value="">Select Building...</option>
+                        <option value="Art Building (ART)">Art Building (ART)</option>
+                        <option value="Bell Building (EBH)">Bell Building (EBH)</option>
+                        <option value="Courtyard 1 (UC1)">Courtyard 1 (UC1)</option>
+                        <option value="Courtyard 2 (UC2)">Courtyard 2 (UC2)</option>
+                        <option value="Courtyard 3 (UC3)">Courtyard 3 (UC3)</option>
+                        <option value="Earl Carl Building (AMB)">Earl Carl Building (AMB)</option>
+                        <option value="East Garage (PGB)">East Garage (PGB)</option>
+                        <option value="Education Building (ED)">Education Building (ED)</option>
+                        <option value="Fairchild (RH)">Fairchild (RH)</option>
+                        <option value="Fieldhouse (ATF)">Fieldhouse (ATF)</option>
+                        <option value="General Services Building (GSB)">General Services Building (GSB)</option>
+                        <option value="Gray Hall (GH)">Gray Hall (GH)</option>
+                        <option value="Hannah Hall (HH)">Hannah Hall (HH)</option>
+                        <option value="Health and PE Building (HPE)">Health and PE Building (HPE)</option>
+                        <option value="JHJ Business Building (JHJ)">JHJ Business Building (JHJ)</option>
+                        <option value="KTSU Radio Station (KTSU)">KTSU Radio Station (KTSU)</option>
+                        <option value="Lane Home Economics Center (HE)">Lane Home Economics Center (HE)</option>
+                        <option value="Law School (LSB)">Law School (LSB)</option>
+                        <option value="Learning/Testing Center (LC)">Learning/Testing Center (LC)</option>
+                        <option value="Library (LLC)">Library (LLC)</option>
+                        <option value="MLK Building (MLK)">MLK Building (MLK)</option>
+                        <option value="Nabrit Science Center Annex (NSCA)">Nabrit Science Center Annex (NSCA)</option>
+                        <option value="Post Office (PO)">Post Office (PO)</option>
+                        <option value="Public Affairs Building (PAB)">Public Affairs Building (PAB)</option>
+                        <option value="Recreation Center (RC)">Recreation Center (RC)</option>
+                        <option value="Rhinehart Music Auditorium (RMA)">Rhinehart Music Auditorium (RMA)</option>
+                        <option value="Rhinehart Music Building (RSM)">Rhinehart Music Building (RSM)</option>
+                        <option value="Sawyer Auditorium (UA)">Sawyer Auditorium (UA)</option>
+                        <option value="Science Building (SCR)">Science Building (SCR)</option>
+                        <option value="Student Center (SLC)">Student Center (SLC)</option>
+                        <option value="Technology Building (LHO)">Technology Building (LHO)</option>
+                        <option value="Tierwester Oaks 1 (TO1)">Tierwester Oaks 1 (TO1)</option>
+                        <option value="Tierwester Oaks 2 (TO2)">Tierwester Oaks 2 (TO2)</option>
+                        <option value="Tierwester Oaks 3 (TO3)">Tierwester Oaks 3 (TO3)</option>
+                        <option value="Tierwester Oaks 4 (TO4)">Tierwester Oaks 4 (TO4)</option>
+                        <option value="University Health Center (HC)">University Health Center (HC)</option>
+                        <option value="University Tower I (UT1)">University Tower I (UT1)</option>
+                        <option value="University Tower II (UT2)">University Tower II (UT2)</option>
+                        <option value="Warehouse (WRB)">Warehouse (WRB)</option>
+                        <option value="West Garage (PGA)">West Garage (PGA)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="room">Room Number *</label>
+                    <input type="text" id="room" required>
+                </div>
+                <div class="form-group">
+                    <label for="managementSystem">Management System *</label>
+                    <select id="managementSystem" required>
+                        <option value="">Select...</option>
+                        <option value="Intune">Intune</option>
+                        <option value="SCCM">SCCM</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="assignedTo">Assigned To</label>
+                    <input type="text" id="assignedTo">
+                </div>
+                <div class="form-group">
+                    <label for="comments">Comments</label>
+                    <textarea id="comments"></textarea>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn-primary">Add Asset</button>
+                <button type="button" class="btn-secondary" onclick="clearForm()">Clear Form</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="container">
+        <h1>📊 Inventory Records</h1>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Assets</div>
+                <div class="stat-value" id="totalCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Locations</div>
+                <div class="stat-value" id="locationCount">0</div>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="searchBox" placeholder="Search by any field..." onkeyup="filterTable()">
+        </div>
+
+        <div class="button-group">
+            <button class="btn-secondary" onclick="exportToCSV()">📥 Export to CSV</button>
+            <button class="btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
+        </div>
+
+        <div class="table-container">
+            <table id="assetTable">
+                <thead>
+                    <tr>
+                        <th>Asset Tag</th>
+                        <th>Serial Number</th>
+                        <th>Make</th>
+                        <th>Model</th>
+                        <th>Building</th>
+                        <th>Room</th>
+                        <th>Management System</th>
+                        <th>Assigned To</th>
+                        <th>Comments</th>
+                        <th>Timestamp</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="assetTableBody">
+                </tbody>
+            </table>
+            <div id="emptyState" class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <p>No assets recorded yet. Start scanning to add assets!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera Scanner Modal -->
+    <div id="scannerModal" class="scanner-modal">
+        <div class="scanner-container">
+            <div class="scanner-header">
+                <h2>📷 Scan Barcode</h2>
+                <button class="close-scanner" onclick="closeScanner()">Close</button>
+            </div>
+            <div id="reader"></div>
+            <p class="scanner-hint-text">Position the barcode within the camera view</p>
+        </div>
+    </div>
+
+    <script>
+        let assets = [];
+        let editingIndex = -1;
+        let html5QrcodeScanner = null;
+        let currentScanField = null;
+
+        // Load assets from localStorage on page load
+        function loadAssets() {
+            const stored = localStorage.getItem('assetInventory');
+            if (stored) {
+                assets = JSON.parse(stored);
+                renderTable();
+                updateStats();
+            }
+        }
+
+        // Save assets to localStorage
+        function saveAssets() {
+            localStorage.setItem('assetInventory', JSON.stringify(assets));
+        }
+
+        // Handle Make dropdown change
+        function handleMakeChange() {
+            const makeSelect = document.getElementById('make');
+            const makeOther = document.getElementById('makeOther');
+
+            if (makeSelect.value === 'Other') {
+                makeOther.style.display = 'block';
+                makeOther.required = true;
+                makeOther.focus();
+            } else {
+                makeOther.style.display = 'none';
+                makeOther.required = false;
+                makeOther.value = '';
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('assetForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Get the make value (use custom text if "Other" is selected)
+            let makeValue = document.getElementById('make').value;
+            if (makeValue === 'Other') {
+                makeValue = document.getElementById('makeOther').value.trim();
+            }
+
+            const asset = {
+                assetTag: document.getElementById('assetTag').value.trim(),
+                serialNumber: document.getElementById('serialNumber').value.trim(),
+                make: makeValue,
+                model: document.getElementById('model').value.trim(),
+                building: document.getElementById('building').value.trim(),
+                room: document.getElementById('room').value.trim(),
+                managementSystem: document.getElementById('managementSystem').value,
+                assignedTo: document.getElementById('assignedTo').value.trim(),
+                comments: document.getElementById('comments').value.trim(),
+                timestamp: new Date().toISOString()
+            };
+
+            if (editingIndex >= 0) {
+                // Update existing asset
+                assets[editingIndex] = asset;
+                editingIndex = -1;
+                showNotification('Asset updated successfully!');
+            } else {
+                // Add new asset
+                assets.unshift(asset); // Add to beginning of array
+                showNotification('Asset added successfully!');
+            }
+
+            saveAssets();
+            renderTable();
+            updateStats();
+            clearForm();
+        });
+
+        // Clear the form
+        function clearForm() {
+            // Save the building value before clearing
+            const currentBuilding = document.getElementById('building').value;
+
+            document.getElementById('assetForm').reset();
+
+            // Restore the building value
+            document.getElementById('building').value = currentBuilding;
+
+            // Hide the makeOther field
+            document.getElementById('makeOther').style.display = 'none';
+            document.getElementById('makeOther').required = false;
+
+            document.getElementById('assetTag').focus();
+            editingIndex = -1;
+
+            // Reset button text if in edit mode
+            const submitBtn = document.querySelector('.btn-primary');
+            submitBtn.textContent = 'Add Asset';
+        }
+
+        // Edit an asset
+        function editAsset(index) {
+            const asset = assets[index];
+            document.getElementById('assetTag').value = asset.assetTag;
+            document.getElementById('serialNumber').value = asset.serialNumber;
+
+            // Handle Make field - check if it's a predefined value or custom
+            const makeSelect = document.getElementById('make');
+            const predefinedMakes = ['Apple', 'HP', 'Dell', 'Microsoft'];
+
+            if (predefinedMakes.includes(asset.make)) {
+                makeSelect.value = asset.make;
+                document.getElementById('makeOther').style.display = 'none';
+                document.getElementById('makeOther').required = false;
+            } else {
+                makeSelect.value = 'Other';
+                document.getElementById('makeOther').value = asset.make;
+                document.getElementById('makeOther').style.display = 'block';
+                document.getElementById('makeOther').required = true;
+            }
+
+            document.getElementById('model').value = asset.model;
+            document.getElementById('building').value = asset.building;
+            document.getElementById('room').value = asset.room;
+            document.getElementById('managementSystem').value = asset.managementSystem || '';
+            document.getElementById('assignedTo').value = asset.assignedTo || '';
+            document.getElementById('comments').value = asset.comments || '';
+
+            editingIndex = index;
+
+            // Change button text
+            const submitBtn = document.querySelector('.btn-primary');
+            submitBtn.textContent = 'Update Asset';
+
+            // Scroll to form
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('assetTag').focus();
+        }
+
+        // Delete an asset
+        function deleteAsset(index) {
+            if (confirm('Are you sure you want to delete this asset?')) {
+                assets.splice(index, 1);
+                saveAssets();
+                renderTable();
+                updateStats();
+                showNotification('Asset deleted successfully!');
+            }
+        }
+
+        // Render the table
+        function renderTable() {
+            const tbody = document.getElementById('assetTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const table = document.getElementById('assetTable');
+
+            if (assets.length === 0) {
+                table.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            table.style.display = 'table';
+            emptyState.style.display = 'none';
+
+            tbody.innerHTML = assets.map((asset, index) => `
+                <tr>
+                    <td>${escapeHtml(asset.assetTag)}</td>
+                    <td>${escapeHtml(asset.serialNumber)}</td>
+                    <td>${escapeHtml(asset.make)}</td>
+                    <td>${escapeHtml(asset.model)}</td>
+                    <td>${escapeHtml(asset.building)}</td>
+                    <td>${escapeHtml(asset.room)}</td>
+                    <td>${escapeHtml(asset.managementSystem || '')}</td>
+                    <td>${escapeHtml(asset.assignedTo || '')}</td>
+                    <td>${escapeHtml(asset.comments || '')}</td>
+                    <td>${formatTimestamp(asset.timestamp)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="editAsset(${index})">Edit</button>
+                            <button class="btn-danger" onclick="deleteAsset(${index})">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('totalCount').textContent = assets.length;
+
+            const uniqueLocations = new Set(assets.map(a => `${a.building}-${a.room}`));
+            document.getElementById('locationCount').textContent = uniqueLocations.size;
+        }
+
+        // Filter table based on search
+        function filterTable() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const tbody = document.getElementById('assetTableBody');
+            const rows = tbody.getElementsByTagName('tr');
+
+            for (let row of rows) {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            }
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            if (assets.length === 0) {
+                alert('No data to export!');
+                return;
+            }
+
+            const headers = ['Asset Tag', 'Serial Number', 'Make', 'Model', 'Building', 'Room', 'Management System', 'Assigned To', 'Comments', 'Timestamp'];
+            const csvContent = [
+                headers.join(','),
+                ...assets.map(asset => [
+                    csvEscape(asset.assetTag),
+                    csvEscape(asset.serialNumber),
+                    csvEscape(asset.make),
+                    csvEscape(asset.model),
+                    csvEscape(asset.building),
+                    csvEscape(asset.room),
+                    csvEscape(asset.managementSystem || ''),
+                    csvEscape(asset.assignedTo || ''),
+                    csvEscape(asset.comments || ''),
+                    csvEscape(asset.timestamp)
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const filename = `asset-inventory-${new Date().toISOString().split('T')[0]}.csv`;
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showNotification('CSV exported successfully!');
+        }
+
+        // Clear all data
+        function clearAllData() {
+            if (confirm('Are you sure you want to delete ALL asset records? This cannot be undone!')) {
+                if (confirm('This will permanently delete ' + assets.length + ' records. Are you absolutely sure?')) {
+                    assets = [];
+                    saveAssets();
+                    renderTable();
+                    updateStats();
+                    showNotification('All data cleared!');
+                }
+            }
+        }
+
+        // Show notification
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Helper functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function csvEscape(text) {
+            if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+                return '"' + text.replace(/"/g, '""') + '"';
+            }
+            return text;
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+
+        // Auto-advance on Enter key
+        const formFields = document.querySelectorAll('#assetForm input, #assetForm select, #assetForm textarea');
+        formFields.forEach((field, index) => {
+            field.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    if (index < formFields.length - 1) {
+                        formFields[index + 1].focus();
+                    } else {
+                        document.getElementById('assetForm').requestSubmit();
+                    }
+                }
+            });
+        });
+
+        // Camera Scanner Functions
+        function openScanner(fieldId) {
+            currentScanField = fieldId;
+            const modal = document.getElementById('scannerModal');
+            modal.classList.add('active');
+
+            // Initialize the scanner
+            html5QrcodeScanner = new Html5Qrcode("reader");
+
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, // Use back camera
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                onScanSuccess,
+                onScanError
+            ).catch(err => {
+                console.error("Error starting scanner:", err);
+                alert("Unable to access camera. Please check permissions.");
+                closeScanner();
+            });
+        }
+
+        function closeScanner() {
+            const modal = document.getElementById('scannerModal');
+            modal.classList.remove('active');
+
+            // Stop the scanner
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner.clear();
+                    html5QrcodeScanner = null;
+                }).catch(err => {
+                    console.error("Error stopping scanner:", err);
+                });
+            }
+
+            currentScanField = null;
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Fill the target field with scanned data
+            if (currentScanField) {
+                document.getElementById(currentScanField).value = decodedText;
+                showNotification('Barcode scanned successfully!');
+
+                // Close the scanner
+                closeScanner();
+
+                // Move focus to the next field
+                const nextFieldMap = {
+                    'assetTag': 'serialNumber',
+                    'serialNumber': 'make'
+                };
+
+                const nextField = nextFieldMap[currentScanField];
+                if (nextField) {
+                    setTimeout(() => {
+                        document.getElementById(nextField).focus();
+                    }, 100);
+                }
+            }
+        }
+
+        function onScanError(errorMessage) {
+            // Don't show errors for every frame, they're expected during scanning
+            // console.log("Scan error:", errorMessage);
+        }
+
+        // Initialize
+        loadAssets();
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            // Show a custom install button/prompt if desired
+            console.log('App can be installed');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA was installed');
+            showNotification('App installed successfully!');
+        });
+    </script>
+</body>
+</html>

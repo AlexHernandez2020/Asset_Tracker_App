@@ -2,7 +2,7 @@
   "name": "TSU Asset Inventory Tracker",
   "short_name": "TSU Assets",
   "description": "Asset inventory tracking system for Texas Southern University",
-  "start_url": "/asset-inventory.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#e0e0e0",
   "theme_color": "#800020",
