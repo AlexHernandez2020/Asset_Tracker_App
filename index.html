@@ -551,7 +551,7 @@
                 <button class="close-scanner" onclick="closeScanner()">Close</button>
             </div>
             <div id="reader"></div>
-            <p class="scanner-hint-text">Position the barcode within the camera view</p>
+            <p class="scanner-hint-text"><strong>Scanning Tips:</strong> Hold steady, keep barcode flat, move closer/farther for focus. Good lighting helps!</p>
         </div>
     </div>
 
@@ -868,18 +868,54 @@
             // Initialize the scanner
             html5QrcodeScanner = new Html5Qrcode("reader");
 
+            // Advanced camera configuration for better focus
+            const cameraConfig = {
+                facingMode: "environment",
+                advanced: [{
+                    focusMode: "continuous",
+                    zoom: 1.5
+                }]
+            };
+
+            // Enhanced scanning configuration
+            const scanConfig = {
+                fps: 10,
+                qrbox: { width: 300, height: 150 },  // Wider box for barcodes
+                aspectRatio: 2.0,  // Optimized for linear barcodes
+                disableFlip: false,
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.QR_CODE
+                ]
+            };
+
             html5QrcodeScanner.start(
-                { facingMode: "environment" }, // Use back camera
-                {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 }
-                },
+                cameraConfig,
+                scanConfig,
                 onScanSuccess,
                 onScanError
             ).catch(err => {
-                console.error("Error starting scanner:", err);
-                alert("Unable to access camera. Please check permissions.");
-                closeScanner();
+                // Fallback to basic config if advanced features not supported
+                console.warn("Advanced camera config failed, trying basic config:", err);
+                html5QrcodeScanner.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 10,
+                        qrbox: { width: 300, height: 150 },
+                        aspectRatio: 2.0
+                    },
+                    onScanSuccess,
+                    onScanError
+                ).catch(fallbackErr => {
+                    console.error("Error starting scanner:", fallbackErr);
+                    alert("Unable to access camera. Please check permissions.");
+                    closeScanner();
+                });
             });
         }
 
